@@ -1,10 +1,10 @@
 # Memer - Decentralized Social Media DApp
 
+Memer is a decentralized social media DApp built on the Lens Protocol and powered by [Streamr](https://www.streamr.network/). It allows you to sign in with your Lens profile and see a feed of memes that you and everyone you follow have posted. Memer enables you to create, share, and discover memes in a decentralized way, providing a new level of interaction and freedom in the social media landscape. With Streamr's real-time data infrastructure, Memer offers a powerful and innovative chatting experience alongside meme sharing.
+
 ## Demo
 
 A demo of Memer can be viewed at this link: [https://www.youtube.com/watch?v=nX-qkKPNbUE](https://www.youtube.com/watch?v=nX-qkKPNbUE)
-
-Memer is a decentralized social media DApp built on the Lens Protocol and powered by [Streamr](https://www.streamr.network/). It allows you to sign in with your Lens profile and see a feed of memes that you and everyone you follow have posted. Memer enables you to create, share, and discover memes in a decentralized way, providing a new level of interaction and freedom in the social media landscape. With Streamr's real-time data infrastructure, Memer offers a powerful and innovative chatting experience alongside meme sharing.
 
 ## Features
 
