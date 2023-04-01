@@ -9,7 +9,7 @@ import { alchemyProvider } from "wagmi/providers/alchemy";
 import { publicProvider } from "wagmi/providers/public";
 import { LensContextProvider } from "../context/LensContext";
 import { ApolloProvider } from "@apollo/client";
-import { apolloClient } from "@/constants/lensConstants";
+import { apolloClient } from "../constants/lensConstants";
 
 const { chains, provider } = configureChains(
   [polygon],

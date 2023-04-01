@@ -29,7 +29,7 @@ function MemeItem({ meme }) {
           </div>
           <div className="bg-white p-4">
             <h2 className="text-md font-semibold text-gray-700">
-              {meme.metadata.name}
+              {meme.metadata.name} | shared by {meme.profile.name}
             </h2>
           </div>
         </div>

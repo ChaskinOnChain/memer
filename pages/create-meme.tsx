@@ -12,6 +12,10 @@ import { useDebounce } from "usehooks-ts";
 import LensClient, { polygon } from "@lens-protocol/client";
 import "tailwindcss/tailwind.css";
 import classNames from "classnames";
+import { ClipLoader } from "react-spinners";
+import Confetti from "react-confetti";
+import Link from "next/link";
+import { useRouter } from "next/router";
 
 const lensClient = new LensClient({
   environment: polygon,
@@ -50,15 +54,21 @@ async function createMemeImage(
   canvas.width = img.width;
   canvas.height = img.height;
   ctx.drawImage(img, 0, 0);
-  ctx.font = "bold 40px Arial"; // Increased font size and added bold weight
+
+  const fontSize = Math.floor(img.width / 8); // Dynamic font size based on image width
+  ctx.font = `bold ${fontSize}px Arial`; // Set font size and weight
   ctx.fillStyle = "white";
   ctx.strokeStyle = "black";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = Math.floor(fontSize / 15);
   ctx.textAlign = "center";
-  ctx.fillText(topText, img.width / 2, 40);
-  ctx.strokeText(topText, img.width / 2, 40);
-  ctx.fillText(bottomText, img.width / 2, img.height - 20);
-  ctx.strokeText(bottomText, img.width / 2, img.height - 20);
+
+  const topTextY = fontSize + Math.floor(fontSize / 15); // Adjust the vertical position of the top text
+  ctx.fillText(topText, img.width / 2, topTextY);
+  ctx.strokeText(topText, img.width / 2, topTextY);
+
+  const bottomTextY = img.height - Math.floor(fontSize / 4); // Adjust the vertical position of the bottom text
+  ctx.fillText(bottomText, img.width / 2, bottomTextY);
+  ctx.strokeText(bottomText, img.width / 2, bottomTextY);
 
   return await new Promise<Blob>((resolve) =>
     canvas.toBlob(resolve, "image/png", 0.95)
@@ -135,19 +145,62 @@ function PostForm() {
     functionName: "post",
     args: debouncedTransactionArgs,
   });
-  const { write } = useContractWrite(config);
-  const { isLoading, isSuccess } = useWaitForTransaction();
+  const { data, write } = useContractWrite(config);
+  const { isLoading, isSuccess } = useWaitForTransaction({
+    hash: data?.hash,
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const router = useRouter();
+  const [confettiSize, setConfettiSize] = useState({ width: 0, height: 0 });
+  const [pinataApiKey, setPinataApiKey] = useState("");
+  const [pinataApiSecret, setPinataApiSecret] = useState("");
+
+  useEffect(() => {
+    const handleResize = () => {
+      setConfettiSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    handleResize(); // Set the initial width and height
+    window.addEventListener("resize", handleResize); // Update the width and height on window resize
+
+    return () => {
+      window.removeEventListener("resize", handleResize); // Cleanup the event listener
+    };
+  }, []);
+
+  const refreshPage = () => {
+    router.replace(router.asPath);
+  };
+
+  useEffect(() => {
+    console.log("Reached here");
+    if (debouncedTransactionArgs) {
+      console.log("Transaction args are: ", debouncedTransactionArgs);
+      write?.(...debouncedTransactionArgs);
+      console.log(isLoading);
+    }
+  }, [debouncedTransactionArgs, write]);
 
   const defaultImages = [];
   for (let i = 0; i < 12; i++) {
     defaultImages.push(`/crypto-memes/image${i}.png`);
   }
 
+  useEffect(() => {
+    if (isSuccess) {
+      setIsSubmitting(false);
+      setShowConfetti(true);
+      setTimeout(() => {
+        setShowConfetti(false);
+        router.reload(); // Refresh the page
+      }, 10000); // Adjust this value to control the duration of the confetti animation
+    }
+  }, [isSuccess]);
+
   const publishMeme = async ({ memeName }) => {
+    setIsSubmitting(true);
     let fullContentURI;
-    const pinataApiKey = "e376349afcfece39b493";
-    const pinataApiSecret =
-      "82d79ddd3f9112980f58479bc2482652af1e30e983320ceab49af6daae61b099";
     const memeBlob = await createMemeImage(selectedImage, topText, bottomText);
     const imageUri = await pinImageToPinata(
       memeBlob,
@@ -181,8 +234,7 @@ function PostForm() {
       ],
     ];
     setTransactionArgs(transactionParameters);
-    console.log("Transaction args are: ", debouncedTransactionArgs);
-    write?.(...debouncedTransactionArgs);
+    console.log("It's going pls wait");
   };
 
   const handleImageChange = (e) => {
@@ -192,97 +244,139 @@ function PostForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(publishMeme)} className="space-y-4">
-      <div>
-        <label className="block font-medium text-lg text-blue-600">
-          Select an image:
-        </label>
-        <div className="flex flex-wrap justify-center gap-4 mb-4">
-          {defaultImages.map((image, index) => (
-            <img
-              key={index}
-              src={image}
-              alt={`crypto-meme-${index}`}
-              className={classNames(
-                "default-image w-1/3 md:w-1/4 lg:w-1/5 object-cover cursor-pointer border-4 rounded shadow-sm transform hover:scale-105 transition-all duration-300",
-                {
-                  "border-blue-500": selectedImage === image,
-                  "border-gray-300": selectedImage !== image,
-                }
-              )}
-              onClick={() => setSelectedImage(image)}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block font-medium text-lg text-blue-600">
-          Or upload your own image:
-        </label>
-        <input
-          type="file"
-          onChange={handleImageChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-300"
-        />
-      </div>
-      <input
-        placeholder="Meme Title"
-        name="memeName"
-        {...register("memeName", {
-          maxLength: 100,
-          minLength: 1,
-          required: true,
-        })}
-        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-300"
-      />
-
-      {selectedImage && (
+    <>
+      {showConfetti && (
+        <Confetti width={confettiSize.width} height={confettiSize.height} />
+      )}
+      <form onSubmit={handleSubmit(publishMeme)} className="space-y-4">
         <div>
           <label className="block font-medium text-lg text-blue-600">
-            Top Text:
+            Select an image:
           </label>
-          <input
-            placeholder="Top Text"
-            value={topText}
-            onChange={(e) => setTopText(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-300"
-          />
-
-          <label className="block font-medium text-lg text-blue-600">
-            Bottom Text:
-          </label>
-          <input
-            placeholder="Bottom Text"
-            value={bottomText}
-            onChange={(e) => setBottomText(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-300"
-          />
-
-          <div className="relative mt-4">
-            <img src={selectedImage} alt="Selected Meme" />
-            <div className="absolute top-0 left-0 w-full text-center text-white font-bold text-7xl">
-              {topText}
-            </div>
-            <div className="absolute bottom-0 left-0 w-full text-center text-white font-bold text-7xl">
-              {bottomText}
-            </div>
+          <div className="flex flex-wrap justify-center gap-4 mb-4">
+            {defaultImages.map((image, index) => (
+              <img
+                key={index}
+                src={image}
+                alt={`crypto-meme-${index}`}
+                className={classNames(
+                  "default-image w-1/3 md:w-1/4 lg:w-1/5 object-cover cursor-pointer border-4 rounded shadow-sm transform hover:scale-105 transition-all duration-300",
+                  {
+                    "border-blue-500": selectedImage === image,
+                    "border-gray-300": selectedImage !== image,
+                  }
+                )}
+                onClick={() => setSelectedImage(image)}
+              />
+            ))}
           </div>
         </div>
-      )}
-      {errors ? <div> {errors.content?.message}</div> : <div></div>}
-      {profileId && token ? (
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded mt-4 transition-colors duration-200 ease-in-out hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:ring-opacity-50"
-          disabled={!selectedImage || !formState.isValid}
-        >
-          Submit Meme
-        </button>
-      ) : (
-        <div>You need to sign in or get a lens handle</div>
-      )}
-    </form>
+
+        <div>
+          <label className="block font-medium text-lg text-blue-600">
+            Or upload your own image:
+          </label>
+          <input
+            type="file"
+            onChange={handleImageChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-300"
+          />
+        </div>
+        <input
+          placeholder="Meme Title"
+          name="memeName"
+          {...register("memeName", {
+            maxLength: 100,
+            minLength: 1,
+            required: true,
+          })}
+          className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-300"
+        />
+
+        {selectedImage && (
+          <div>
+            <label className="block font-medium text-lg text-blue-600">
+              Top Text:
+            </label>
+            <input
+              placeholder="Top Text"
+              value={topText}
+              onChange={(e) => setTopText(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-300"
+            />
+
+            <label className="block font-medium text-lg text-blue-600">
+              Bottom Text:
+            </label>
+            <input
+              placeholder="Bottom Text"
+              value={bottomText}
+              onChange={(e) => setBottomText(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-300"
+            />
+
+            <div className="relative mt-4">
+              <img src={selectedImage} alt="Selected Meme" />
+              <div className="absolute top-0 left-0 w-full text-center text-white font-bold text-7xl">
+                {topText}
+              </div>
+              <div className="absolute bottom-0 left-0 w-full text-center text-white font-bold text-7xl">
+                {bottomText}
+              </div>
+            </div>
+          </div>
+        )}
+        <div>
+          <label className="block font-medium text-lg text-blue-600">
+            Pinata API Key:
+          </label>
+          <input
+            placeholder="Pinata API Key"
+            value={pinataApiKey}
+            onChange={(e) => setPinataApiKey(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-300"
+          />
+        </div>
+        <div>
+          <label className="block font-medium text-lg text-blue-600">
+            Pinata API Secret:
+          </label>
+          <input
+            placeholder="Pinata API Secret"
+            value={pinataApiSecret}
+            onChange={(e) => setPinataApiSecret(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-300"
+          />
+        </div>
+        {errors ? <div> {errors.content?.message}</div> : <div></div>}
+        {profileId && token ? (
+          <button
+            type="submit"
+            className="bg-blue-500 text-white px-4 py-2 rounded mt-4 transition-colors duration-200 ease-in-out hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:ring-opacity-50"
+            disabled={!selectedImage || !formState.isValid}
+          >
+            Submit Meme
+          </button>
+        ) : (
+          <div>You need to sign in or get a lens handle</div>
+        )}
+        {isSubmitting && (
+          <div className="ml-3">
+            <ClipLoader color="#00BFFF" loading={true} size={30} />
+          </div>
+        )}
+        {isSuccess && (
+          <div className="ml-3 bg-blue-500 text-white px-4 py-2 rounded text-lg font-bold">
+            Your meme is posted!{" "}
+            <Link href="/" className="underline">
+              Click Here
+            </Link>{" "}
+            to go back to the meme feed. The page will refresh automatically
+            after the confetti animation.
+          </div>
+        )}
+      </form>
+    </>
   );
 }
 

@@ -69,7 +69,7 @@ export const getMemes = gql`
 export const getMemesVariables = function (profileIds: string[]) {
   return {
     request: {
-      limit: 5,
+      limit: 30,
       publicationTypes: "POST",
       metadata: {
         mainContentFocus: "IMAGE",
@@ -100,7 +100,7 @@ export const createContentMetadata = function (contentName, imageUri) {
     version: "2.0.0",
     metadata_id: uuidv4(),
     description: "Created from memer",
-    media: { item: imageUri, type: "image/png" },
+    media: [{ item: imageUri, type: "image/png" }],
     name: contentName,
     mainContentFocus: "IMAGE",
     attributes: [],

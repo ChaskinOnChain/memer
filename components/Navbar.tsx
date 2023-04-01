@@ -1,5 +1,6 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Navbar() {
   return (
@@ -23,8 +24,11 @@ export default function Navbar() {
             </li>
           </ul>
         </div>
-        <div>
-          <ConnectButton className="text-white font-semibold hover:text-gray-100 mr-4" />
+        <div className="flex items-center">
+          <ConnectButton className="text-white font-semibold hover:text-gray-100 mr-10" />
+          <div className="ml-2">
+            <Image src="/images/lens1.png" alt="lens" width={50} height={20} />
+          </div>
         </div>
       </div>
     </nav>
